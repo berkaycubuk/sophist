@@ -1,0 +1,23 @@
+import header
+
+title Hello
+
+this is my beautiful content
+
+title2 A brief history about this
+
+title3 Heading 3
+
+title4 Heading 4
+
+title5 Heading 5
+
+image https://google.com
+    alt Hello
+
+title6 Heading 6
+
+test
+test <b>control</b> 123
+
+import footer
