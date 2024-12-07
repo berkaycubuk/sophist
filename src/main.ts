@@ -2,6 +2,8 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { Token, Node, Atom, Title, Title2, Title3, Title4, Title5, Title6, Image, Date } from './atom';
 
+console.log("Sophist v1.0.0");
+
 const atoms: Atom[] = [
     new Title('title'),
     new Title2('title2'),
@@ -129,7 +131,7 @@ function parse(tokens: Token[]): Node[] {
 
 async function loadImport(filename: string): Promise<string> {
     try {
-        const data = await fs.readFileSync(__dirname + '/../' + filename, 'utf8');
+        const data = await fs.readFileSync(path.join(process.cwd(),  filename), 'utf8');
         return data;
     } catch {
         return '';
@@ -205,7 +207,10 @@ async function render(nodes: Node[]): Promise<string> {
     }
 
     if (containsHTML5) {
-        const metaTags = `<title>${title}</title>`;
+        const metaTags = `<title>${title}</title>
+<meta name="viewport" content="width=device-width">
+<meta property="og:title" content="${title}" />
+<meta property="twitter:title" content="${title}" />`;
         output = `<!DOCTYPE html>
     <head>
         ${containsMetaTags ? metaTags : ''}
@@ -225,22 +230,28 @@ async function main() {
     const sophistFiles: string[] = [];
     const workingDirectory = process.cwd();
 
-    if (args.length >= 3) {
-        sophistFiles.push(path.join(workingDirectory, args[2]));
-    } else {
-        // detect .sphst files in the directory
-        const items = await fs.readdirSync(workingDirectory);
+    async function queueFiles(dirpath: string): Promise<void> {
+        const items = await fs.readdirSync(dirpath);
 
-        await items.forEach(async (item) => {
-            const fullPath = path.join(workingDirectory, item);
-            const stats = await fs.statSync(fullPath);
+        items.forEach((item) => {
+            const fullPath = path.join(dirpath, item);
+            const stats = fs.statSync(fullPath);
 
             if (!stats.isDirectory()) {
                 if (fullPath.endsWith('.sphst')) {
                     sophistFiles.push(fullPath);
                 }
+            } else {
+                queueFiles(fullPath);
             }
         });
+    }
+
+    if (args.length >= 3) {
+        sophistFiles.push(path.join(workingDirectory, args[2]));
+    } else {
+        // detect .sphst files in the directory
+        await queueFiles(workingDirectory);
     }
 
     if (sophistFiles.length === 0) {
@@ -249,20 +260,11 @@ async function main() {
     }
 
     await sophistFiles.forEach(async (file) => {
-        const pathElements = file.split('/');
-        const filename = pathElements[pathElements.length - 1];
-        pathElements.pop();
-        pathElements.push('out');
-        pathElements.push(filename.split('.')[0] + '.html');
-
-        const outputPath = pathElements.join('/');
-
         const data = await fs.readFileSync(file, 'utf8');
 
         const tokens = tokenizer(data);
         const parsedNodes = parse(tokens);
         const html = await render(parsedNodes);
-
         let includesImportable = false;
         for (const node of parsedNodes) {
             if (node.type === 'importable') {
@@ -275,17 +277,30 @@ async function main() {
             return;
         }
 
-        if (!(await fs.existsSync(workingDirectory + '/out'))) {
-            await fs.mkdirSync(workingDirectory + '/out');
-        }
+        let leanPath = file.replace(workingDirectory, '');
+        const pathElements = file.split('/');
+        const filename = pathElements[pathElements.length - 1];
+        const outputFilename = filename.split('.')[0] + '.html';
+        leanPath = leanPath.replace(filename, outputFilename);
 
-        console.log(parsedNodes);
-        console.log(html);
+        const path1 = path.join(workingDirectory, 'out');
+
+        const outputPath = path.join(path1, leanPath);
+
+        //console.log(parsedNodes);
+        //console.log(html);
 
         if (args.length === 4 && args[3] === '-o') {
             await fs.writeFileSync(outputPath, html);
         } else if (args.length === 2) {
-            await fs.writeFileSync(outputPath, html);
+            fs.mkdir(path.dirname(outputPath), { recursive: true }, (err) => {
+                if (err) throw err;
+
+                fs.writeFile(outputPath, html, (err) => {
+                    if (err) throw err;
+                    console.log(outputPath + ' file created.');
+                });
+            })
         }
     });
 }
