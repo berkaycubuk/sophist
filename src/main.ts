@@ -1,8 +1,6 @@
 import * as fs from 'node:fs';
 import * as path from 'node:path';
-import { Token, Node, Atom, Title, Title2, Title3, Title4, Title5, Title6, Image } from './atom';
-
-const tabSize = 4;
+import { Token, Node, Atom, Title, Title2, Title3, Title4, Title5, Title6, Image, Date } from './atom';
 
 const atoms: Atom[] = [
     new Title('title'),
@@ -12,6 +10,7 @@ const atoms: Atom[] = [
     new Title5('title5'),
     new Title6('title6'),
     new Image('image'),
+    new Date('date'),
 ];
 
 function tokenizer(input: string): Token[] {
@@ -129,13 +128,17 @@ function parse(tokens: Token[]): Node[] {
 }
 
 async function loadImport(filename: string): Promise<string> {
-    const data = await fs.readFileSync(__dirname + '/../' + filename + '.sphst', 'utf8');
-
-    return data;
+    try {
+        const data = await fs.readFileSync(__dirname + '/../' + filename, 'utf8');
+        return data;
+    } catch {
+        return '';
+    }
 }
 
 async function render(nodes: Node[]): Promise<string> {
     let output = '';
+    let headOutput = '';
     const finalNodes: Node[] = [];
 
     let containsHTML5 = false;
@@ -146,12 +149,17 @@ async function render(nodes: Node[]): Promise<string> {
     for (const node of nodes) {
         if (node.type === 'import') {
             // TODO: what if Node[] is given?
-            const importedString = await loadImport(node.content.toString());
-            const tokens = tokenizer(importedString);
-            const parsedNodes = parse(tokens);
 
-            for (const importedNode of parsedNodes) {
-                finalNodes.push(importedNode);
+            const filename = node.content.toString();
+
+            const importedString = await loadImport(filename);
+            if (filename.endsWith('.sphst')) {
+                const tokens = tokenizer(importedString);
+                const parsedNodes = parse(tokens);
+
+                for (const importedNode of parsedNodes) {
+                    finalNodes.push(importedNode);
+                }
             }
         } else {
             if (node.type !== 'importable') {
@@ -165,6 +173,12 @@ async function render(nodes: Node[]): Promise<string> {
             containsHTML5 = true;
         } else if (node.type === 'metatags') {
             containsMetaTags = true;
+        } else if (node.type === 'import') {
+            if (!Array.isArray(node.content)) {
+                if (node.content.endsWith('.css')) {
+                    headOutput += `<link rel="stylesheet" href="${node.content}" />\n`;
+                }
+            }
         } else if (node.type === 'importable') {
             continue;
         } else {
@@ -180,8 +194,12 @@ async function render(nodes: Node[]): Promise<string> {
                 }
             }
             
-            if (!foundSomething) {
-                output += `<p>${node.content}</p>\n`;
+            if (!foundSomething && !Array.isArray(node.content)) {
+                if (node.content.startsWith('<')) {
+                    output += `${node.content}\n`;
+                } else {
+                    output += `<p>${node.content}</p>\n`;
+                }
             }
         }
     }
@@ -191,9 +209,11 @@ async function render(nodes: Node[]): Promise<string> {
         output = `<!DOCTYPE html>
     <head>
         ${containsMetaTags ? metaTags : ''}
+        ${headOutput}
     </head>
     <body>
-` + output + `</body>
+        ${output}
+    </body>
 </html>`;
     }
 

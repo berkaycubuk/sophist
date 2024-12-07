@@ -3,3 +3,12 @@ importable
 html5
 
 metatags
+
+import style.css
+
+<nav class="header-nav">
+    <a href="/">Blog</a>
+    <a href="/about">About</a>
+    <a href="/contact">Contact</a>
+    <a href="/resume">Resume</a>
+</nav>

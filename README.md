@@ -8,6 +8,36 @@ Sophist is a simple markup language to build static websites. Sophist is highly 
 
 ## Documentation
 
+### title
+
+Example:
+
+```sphst
+title This is my title
+```
+
+Generated result:
+
+```html
+<h1>This is my title</h1>
+```
+
+### title2
+
+Example:
+
+```sphst
+title2 This is my second title
+```
+
+Generated result:
+
+```html
+<h2>This is my second title</h2>
+```
+
+### Rest of the commands
+
 - title: `<h1>`
 - title2: `<h2>`
 - title3: `<h3>`

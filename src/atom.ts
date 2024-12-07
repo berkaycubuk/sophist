@@ -298,6 +298,48 @@ export class Title6 extends Atom {
     }
 }
 
+export class Date extends Atom {
+    tokenize(line: string): TokenizeResult {
+        if (line.startsWith(this.type + ' ')) {
+            return {
+                jumpedLineCount: 1,
+                tokens: [{ type: this.type, value: line.slice(this.type.length + 1).trim() }],
+            };
+        }
+
+        return {
+            jumpedLineCount: 0,
+            tokens: [],
+        };
+    }
+
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-function-type
+    parse(token: Token, parseValue: Function): ParseResult {
+        if (token.type === this.type) {
+            return {
+                jumpedLineCount: 1,
+                node: {
+                    type: this.type,
+                    content: parseValue(0),
+                },
+            };
+        }
+
+        return {
+            jumpedLineCount: 0,
+            node: null,
+        };
+    }
+
+    renderHTML(node: Node): string | null {
+        if (node.type === this.type) {
+            return `<div class="date">${node.content}</div>\n`;
+        }
+
+        return null;
+    }
+}
+
 export class Image extends Atom {
     tokenize(line: string, lines: string[], currentIndex: number): TokenizeResult {
         const tokens: Token[] = [];

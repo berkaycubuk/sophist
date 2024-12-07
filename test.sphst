@@ -1,4 +1,4 @@
-import header
+import header.sphst
 
 title Hello
 
@@ -22,4 +22,4 @@ title6 Heading 6
 test
 test <b>control</b> 123
 
-import footer
+import footer.sphst

@@ -1,7 +1,39 @@
-import header
+import header.sphst
 
-title About me
+<div class="container-slim">
 
-My name is Berkay and I'm a software engineer.
+title Hugo vs Astro: A Comprehensive Comparison
 
-import footer
+date 06.08.2024
+
+When it comes to building static websites, developers often find themselves weighing different
+frameworks to determine which one best meets their needs. Among the many options available,
+Hugo and Astro stand out as two powerful yet distinct tools. Today, we’ll explore the
+features, performance, and usability of Hugo and Astro, helping you decide which one
+might be the best fit for your next project.
+
+title2 What is Static Site Generation
+
+Before diving into the specifics of Hugo and Astro, it’s essential to
+understand what static site generation (SSG) is and why it has become a popular choice for web development.
+
+Static Site Generation is a method of creating websites where the web pages
+are generated at build time, rather than on each user request. This contrasts
+with traditional server-side rendering, where HTML is generated dynamically
+on the server when a user visits a page.
+
+Generating at build time comes with advantages like; performance, security
+and simplicity.
+
+title3 What is Hugo
+
+image https://berkaycubuk.com/images/hugo.png
+
+Hugo is one of the most popular static site generators, known for its speed
+and flexibility. Because it’s written in Go, Hugo is super fast, especially
+when working with large sites. It uses Go templates, so it has a steep
+learning curve.
+
+</div>
+
+import footer.sphst
