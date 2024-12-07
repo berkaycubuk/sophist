@@ -1,17 +1,18 @@
 import * as fs from 'node:fs';
 import * as path from 'node:path';
-
-interface Token {
-    type: string;
-    value: string;
-}
-
-interface Node {
-    type: string;
-    content: string | Node[];
-}
+import { Token, Node, Atom, Title, Title2, Title3, Title4, Title5, Title6, Image } from './atom';
 
 const tabSize = 4;
+
+const atoms: Atom[] = [
+    new Title('title'),
+    new Title2('title2'),
+    new Title3('title3'),
+    new Title4('title4'),
+    new Title5('title5'),
+    new Title6('title6'),
+    new Image('image'),
+];
 
 function tokenizer(input: string): Token[] {
     const tokens: Token[] = [];
@@ -45,58 +46,13 @@ function tokenizer(input: string): Token[] {
             continue;
         }
 
-        if (line.startsWith('title ')) {
-            tokens.push({ type: 'title', value: line.slice(6).trim() });
-            currentIndex++;
-            continue;
-        }
-
-        if (line.startsWith('title2 ')) {
-            tokens.push({ type: 'title2', value: line.slice(6).trim() });
-            currentIndex++;
-            continue;
-        }
-
-        if (line.startsWith('title3 ')) {
-            tokens.push({ type: 'title3', value: line.slice(6).trim() });
-            currentIndex++;
-            continue;
-        }
-
-        if (line.startsWith('title4 ')) {
-            tokens.push({ type: 'title4', value: line.slice(6).trim() });
-            currentIndex++;
-            continue;
-        }
-
-        if (line.startsWith('title5 ')) {
-            tokens.push({ type: 'title5', value: line.slice(6).trim() });
-            currentIndex++;
-            continue;
-        }
-
-        if (line.startsWith('title6 ')) {
-            tokens.push({ type: 'title6', value: line.slice(6).trim() });
-            currentIndex++;
-            continue;
-        }
-
-        if (line.startsWith('image ')) {
-            tokens.push({ type: 'image', value: line.slice(6).trim() });
-            currentIndex++;
-
-            // Check if the next line is an indented alt text (with tab)
-            if (currentIndex < lines.length && lines[currentIndex].startsWith('\talt ')) {
-                const altText = lines[currentIndex].slice(5).trim(); // Capture alt text
-                tokens.push({ type: 'alt', value: altText });
-                currentIndex++; // Move to next line
-            } else if (currentIndex < lines.length && lines[currentIndex].startsWith('    alt ')) {
-                const altText = lines[currentIndex].slice(tabSize + 4).trim(); // Capture alt text
-                tokens.push({ type: 'alt', value: altText });
-                currentIndex++; // Move to next line
+        for (const atom of atoms) {
+            const result = atom.tokenize(line, lines, currentIndex);
+            currentIndex += result.jumpedLineCount;
+            if (result.tokens.length != 0) {
+                result.tokens.forEach(token => tokens.push(token));
+                break;
             }
-
-            continue;
         }
 
         let textValue = '';
@@ -121,6 +77,10 @@ function parse(tokens: Token[]): Node[] {
 
     function parseText(): string {
         return tokens[currentIndex].value;
+    }
+
+    function parseValue(index: number): string {
+        return tokens[currentIndex + index].value;
     }
 
     while (currentIndex < tokens.length) {
@@ -150,57 +110,13 @@ function parse(tokens: Token[]): Node[] {
             continue;
         }
 
-        if (token.type === 'title') {
-            nodes.push({ type: 'title', content: parseText() });
-            currentIndex++;
-            continue;
-        }
-
-        if (token.type === 'title2') {
-            nodes.push({ type: 'title2', content: parseText() });
-            currentIndex++;
-            continue;
-        }
-
-        if (token.type === 'title3') {
-            nodes.push({ type: 'title3', content: parseText() });
-            currentIndex++;
-            continue;
-        }
-
-        if (token.type === 'title4') {
-            nodes.push({ type: 'title4', content: parseText() });
-            currentIndex++;
-            continue;
-        }
-
-        if (token.type === 'title5') {
-            nodes.push({ type: 'title5', content: parseText() });
-            currentIndex++;
-            continue;
-        }
-
-        if (token.type === 'title6') {
-            nodes.push({ type: 'title6', content: parseText() });
-            currentIndex++;
-            continue;
-        }
-
-        if (token.type === 'image') {
-            const src = parseText();
-            let altText = '';
-            currentIndex++;
-            const content: Node[] = [];
-            content.push({ type: 'imageSrc', content: src });
-
-            if (currentIndex < tokens.length && tokens[currentIndex].type === 'alt') {
-                altText = parseText();
-                currentIndex++; // Skip alt token
-                content.push({ type: 'imageAlt', content: altText });
+        for (const atom of atoms) {
+            const result = atom.parse(token, parseValue, tokens, currentIndex);
+            if (result.node != null) {
+                nodes.push(result.node);
+                currentIndex += result.jumpedLineCount;
+                break;
             }
-
-            nodes.push({ type: 'image', content });
-            continue;
         }
 
         if (token.type === 'text') {
@@ -251,38 +167,22 @@ async function render(nodes: Node[]): Promise<string> {
             containsMetaTags = true;
         } else if (node.type === 'importable') {
             continue;
-        } else if (node.type === 'title') {
-            if (title === '') {
-                title = node.content.toString();
-            }
-            output += `<h1>${node.content}</h1>\n`;
-        } else if (node.type === 'title2') {
-            output += `<h2>${node.content}</h2>\n`;
-        } else if (node.type === 'title3') {
-            output += `<h3>${node.content}</h3>\n`;
-        } else if (node.type === 'title4') {
-            output += `<h4>${node.content}</h4>\n`;
-        } else if (node.type === 'title5') {
-            output += `<h5>${node.content}</h5>\n`;
-        } else if (node.type === 'title6') {
-            output += `<h6>${node.content}</h6>\n`;
-        } else if (node.type === 'image') {
-            let args = '';
-            if (Array.isArray(node.content)) {
-                let isEmpty = true;
-                for (const subnode of node.content) {
-                    if (subnode.type === 'imageSrc') {
-                        args += `${!isEmpty ? ' ' : ''}src="${subnode.content}"`;
-                        isEmpty = false;
-                    } else if (subnode.type === 'imageAlt') {
-                        args += `${!isEmpty ? ' ' : ''}alt="${subnode.content}"`;
-                        isEmpty = false;
-                    }
+        } else {
+            let foundSomething = false;
+            for (const atom of atoms) {
+                if (title === '' && node.type === 'title') {
+                    title = node.content.toString();
+                }
+                const out = atom.renderHTML(node);
+                if (out != null) {
+                    output += out;
+                    foundSomething = true;
                 }
             }
-            output += `<img ${args} />\n`;
-        } else {
-            output += `<p>${node.content}</p>\n`;
+            
+            if (!foundSomething) {
+                output += `<p>${node.content}</p>\n`;
+            }
         }
     }
 
