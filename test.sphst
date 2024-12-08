@@ -22,4 +22,6 @@ title6 Heading 6
 test
 test <b>control</b> 123
 
+var name value
+
 import footer.sphst

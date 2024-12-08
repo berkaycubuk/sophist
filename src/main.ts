@@ -47,6 +47,13 @@ function tokenizer(input: string): Token[] {
             continue;
         }
 
+        if (line.startsWith('var ')) {
+            // syntax var variable_name variable_value
+            tokens.push({ type: 'variable', value: line.slice(4).trim() });
+            currentIndex++;
+            continue;
+        }
+
         for (const atom of atoms) {
             const result = atom.tokenize(line, lines, currentIndex);
             currentIndex += result.jumpedLineCount;
@@ -57,7 +64,7 @@ function tokenizer(input: string): Token[] {
         }
 
         let textValue = '';
-        while (currentIndex < lines.length && lines[currentIndex].trim() !== '' && !lines[currentIndex].startsWith('title') && !lines[currentIndex].startsWith('subtitle')) {
+        while (currentIndex < lines.length && lines[currentIndex].trim() !== '') {
             textValue += lines[currentIndex].trim() + ' ';
             currentIndex++;
         }
@@ -111,34 +118,60 @@ function parse(tokens: Token[]): Node[] {
             continue;
         }
 
-        for (const atom of atoms) {
-            const result = atom.parse(token, parseValue, tokens, currentIndex);
-            if (result.node != null) {
-                nodes.push(result.node);
-                currentIndex += result.jumpedLineCount;
-                break;
-            }
+        if (token.type === 'variable') {
+            const splitted = token.value.split(' ');
+
+            nodes.push({ type: 'variable', content: [
+                {
+                    type: 'varName',
+                    content: splitted[0],
+                },
+                {
+                    type: 'varValue',
+                    content: splitted.splice(1).join(' '),
+                },
+            ] });
+
+            currentIndex++;
+            continue;
         }
 
         if (token.type === 'text') {
             nodes.push({ type: 'text', content: parseText() });
             currentIndex++;
+            continue;
         }
+
+        let used = false;
+        for (const atom of atoms) {
+            const result = atom.parse(token, parseValue, tokens, currentIndex);
+            if (result.node != null) {
+                nodes.push(result.node);
+                currentIndex += result.jumpedLineCount;
+                used = true;
+                break;
+            }
+        }
+        if (used) {
+            continue;
+        }
+
+        currentIndex++;
     }
 
     return nodes;
 }
 
-async function loadImport(filename: string): Promise<string> {
+function loadImport(filename: string): string {
     try {
-        const data = await fs.readFileSync(path.join(process.cwd(),  filename), 'utf8');
+        const data = fs.readFileSync(path.join(process.cwd(),  filename), 'utf8');
         return data;
     } catch {
         return '';
     }
 }
 
-async function render(nodes: Node[]): Promise<string> {
+function render(nodes: Node[]): string {
     let output = '';
     let headOutput = '';
     const finalNodes: Node[] = [];
@@ -154,7 +187,7 @@ async function render(nodes: Node[]): Promise<string> {
 
             const filename = node.content.toString();
 
-            const importedString = await loadImport(filename);
+            const importedString = loadImport(filename);
             if (filename.endsWith('.sphst')) {
                 const tokens = tokenizer(importedString);
                 const parsedNodes = parse(tokens);
@@ -225,13 +258,13 @@ async function render(nodes: Node[]): Promise<string> {
     return output;
 }
 
-async function main() {
+function main() {
     const args = process.argv;
     const sophistFiles: string[] = [];
     const workingDirectory = process.cwd();
 
-    async function queueFiles(dirpath: string): Promise<void> {
-        const items = await fs.readdirSync(dirpath);
+    function queueFiles(dirpath: string): void {
+        const items = fs.readdirSync(dirpath);
 
         items.forEach((item) => {
             const fullPath = path.join(dirpath, item);
@@ -242,7 +275,9 @@ async function main() {
                     sophistFiles.push(fullPath);
                 }
             } else {
-                queueFiles(fullPath);
+                if (!fullPath.endsWith('node_modules') && !fullPath.endsWith('.git')) {
+                    queueFiles(fullPath);
+                }
             }
         });
     }
@@ -251,7 +286,7 @@ async function main() {
         sophistFiles.push(path.join(workingDirectory, args[2]));
     } else {
         // detect .sphst files in the directory
-        await queueFiles(workingDirectory);
+        queueFiles(workingDirectory);
     }
 
     if (sophistFiles.length === 0) {
@@ -259,12 +294,14 @@ async function main() {
         return;
     }
 
-    await sophistFiles.forEach(async (file) => {
-        const data = await fs.readFileSync(file, 'utf8');
+    sophistFiles.forEach((file) => {
+        const data = fs.readFileSync(file, 'utf8');
 
         const tokens = tokenizer(data);
+
         const parsedNodes = parse(tokens);
-        const html = await render(parsedNodes);
+
+        const html = render(parsedNodes);
         let includesImportable = false;
         for (const node of parsedNodes) {
             if (node.type === 'importable') {
@@ -287,22 +324,16 @@ async function main() {
 
         const outputPath = path.join(path1, leanPath);
 
-        //console.log(parsedNodes);
-        //console.log(html);
-
         if (args.length === 4 && args[3] === '-o') {
-            await fs.writeFileSync(outputPath, html);
+            fs.writeFileSync(outputPath, html);
         } else if (args.length === 2) {
-            fs.mkdir(path.dirname(outputPath), { recursive: true }, (err) => {
-                if (err) throw err;
-
-                fs.writeFile(outputPath, html, (err) => {
-                    if (err) throw err;
-                    console.log(outputPath + ' file created.');
-                });
-            })
+            fs.mkdirSync(path.dirname(outputPath), { recursive: true });
+            fs.writeFileSync(outputPath, html);
+            console.log(outputPath + ' file created.');
         }
     });
+
+    console.log('Finished.');
 }
 
-main().then();
+main();
