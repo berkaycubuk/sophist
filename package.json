@@ -1,23 +1,15 @@
 {
-  "name": "sophist-ts",
-  "version": "1.0.0",
-  "main": "index.js",
-  "scripts": {
-    "build": "npx tsc",
-    "start": "npm run build && node dist/main.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
-  },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "description": "",
-  "dependencies": {
-    "@types/node": "^22.10.1"
-  },
-  "devDependencies": {
-    "eslint": "^9.16.0",
-    "globals": "^15.13.0",
-    "typescript": "^5.7.2",
-    "typescript-eslint": "^8.17.0"
-  }
+    "name": "sophist",
+    "version": "1.0.0",
+    "description": "What if JavaScript eats Markdown?",
+    "main": "main.ts",
+    "scripts": {
+        "compile": "deno compile --allow-read --allow-write --unstable main.ts --output sophist",
+        "start": "deno run -W -R main.ts"
+    },
+    "bin": {
+        "sophist": "./sophist"
+    },
+    "author": "Berkay Çubuk",
+    "license": "MIT"
 }

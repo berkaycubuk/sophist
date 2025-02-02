@@ -1,27 +1,17 @@
-import header.sphst
+const test = await _.import('./test.js');
 
-title Test Page
+_.headLinkCSS('./test.css');
 
-this is my beautiful content
+_.h1("Title");
 
-title2 A brief history about this
+const joe = "Joe!";
 
-title3 Heading 3
+console.log('hey');
 
-image https://berkaycubuk.com/logo.svg
+_.h2(joe);
 
-title4 Heading 4
+_.html("<p>Hi there</p>");
 
-title5 Heading 5
+console.log(test.test);
 
-image https://google.com
-    alt Hello
-
-title6 Heading 6
-
-test
-test <b>control</b> 123
-
-var name value
-
-import footer.sphst
+test.greet();
