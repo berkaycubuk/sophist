@@ -1,0 +1,5 @@
+const fm = _.frontmatter({
+    title: "Hello World",
+});
+
+_.h1(fm.title)

@@ -1,5 +1,5 @@
 import { argv, exit } from 'node:process';
-import { join } from "https://deno.land/std/path/mod.ts";
+import { join, basename } from "https://deno.land/std/path/mod.ts";
 
 const cwd = Deno.cwd();
 
@@ -23,8 +23,11 @@ async function buildFile(filePath: string) {
     return;
   }
 
-  const filename = join('./out', pathSplit.join('.') + '.html');
+  const basenameStr = basename(filePath);
+  const folderPath = filePath.replace(basenameStr, '');
+  const filename = join('./out', (pathSplit.join('.') + '.html').replace(cwd, ''));
 
+  let frontmatter: any = {};
   const head: string[] = [];
   const body: string[] = [];
 
@@ -58,12 +61,46 @@ async function buildFile(filePath: string) {
     },
     import: async function (path: string) {
       return import(join(cwd, path));
+    },
+    frontmatter: function (obj: object) {
+      frontmatter = obj;
+      return obj;
+    },
+    getFiles: async function (pathString: string) {
+      const fullPath = join(folderPath, pathString);
+      const stats = await Deno.stat(fullPath);
+      if (stats.isDirectory) {
+        const files = Deno.readDirSync(fullPath);
+        const formattedFiles: any[] = [];
+        files.forEach(file => {
+          if (file.isFile && file.name.endsWith('.sphst')) {
+            const regex = /_.frontmatter\(\{[^}]*\}\)/g;
+            const content = Deno.readTextFileSync(join(folderPath, join(pathString, file.name)));
+            const matches = regex.exec(content);
+            if (matches && matches.length > 0) {
+              const match = matches[0].trim().replace('_.frontmatter(', '').replace('_.frontmatter(', '').slice(0, -1);
+              const fm = Function(`return JSON.stringify(${match})`)();
+              const url = basename(file.name).replace('.sphst', '')
+
+              formattedFiles.push({...file, frontmatter: JSON.parse(fm), url});
+            } else {
+              formattedFiles.push({...file, frontmatter: {}});
+            }
+          } else {
+            formattedFiles.push({...file});
+          }
+        });
+        return formattedFiles;
+      } else {
+        return [];
+      }
     }
   };
 
   function renderHtml(): string {
     return `<html>
     <head>
+      ${frontmatter['title'] ? '<title>' + frontmatter['title'] + '</title>' : ''}
       ${head.join('\n')}
     </head>
     <body>
@@ -90,7 +127,7 @@ async function buildFile(filePath: string) {
   console.log(filename + ' file created');
 }
 
-const pathString = args[0];
+const pathString = join(cwd, args[0]);
 
 async function listFilesRecursive(dirPath: string): Promise<string[]> {
   const files: string[] = [];
