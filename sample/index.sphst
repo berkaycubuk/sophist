@@ -2,11 +2,11 @@ const fm = _.frontmatter({
     title: "This Year\'s Goal: 11 Months 11 Products",
 });
 
+await _.import('../test.css');
+
 _.h1(fm.title)
 
 const files = await _.getFiles('blog');
-
-console.log(files);
 
 files.forEach(i => {
     if (!i.frontmatter) {

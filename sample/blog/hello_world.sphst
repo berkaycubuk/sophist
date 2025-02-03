@@ -2,4 +2,6 @@ const fm = _.frontmatter({
     title: "Hello World",
 });
 
+_.import('../../test.css');
+
 _.h1(fm.title)

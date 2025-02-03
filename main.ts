@@ -62,7 +62,14 @@ async function buildFile(filePath: string) {
     },
     import: async function (path: string) {
       const fullPath = join(folderPath, path);
-      return import(fullPath);
+
+      if (fullPath.endsWith('.js')) {
+        return import(fullPath);
+      } else if (fullPath.endsWith('.css')) {
+        const cssContent = Deno.readTextFileSync(fullPath);
+        head.push(`<style>${cssContent.trim()}</style>`);
+        return;
+      }
     },
     markdown: function(markdownContent: string) {
       body.push(marked.parse(markdownContent));

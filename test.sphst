@@ -15,7 +15,3 @@ _.html("<p>Hi there</p>");
 console.log(test.test);
 
 test.greet();
-
-const files = await _.getFiles('./');
-
-files.forEach(i => console.log(i));
