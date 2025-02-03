@@ -1,9 +1,10 @@
 import { argv, exit } from 'node:process';
 import { join, basename } from "https://deno.land/std/path/mod.ts";
+import * as marked from 'npm:marked@15.0.6';
 
 const cwd = Deno.cwd();
 
-const isProd = true;
+const isProd = false;
 
 const args = argv.slice(isProd ? 4 : 2);
 
@@ -60,7 +61,11 @@ async function buildFile(filePath: string) {
       body.push(code);
     },
     import: async function (path: string) {
-      return import(join(cwd, path));
+      const fullPath = join(folderPath, path);
+      return import(fullPath);
+    },
+    markdown: function(markdownContent: string) {
+      body.push(marked.parse(markdownContent));
     },
     frontmatter: function (obj: object) {
       frontmatter = obj;
