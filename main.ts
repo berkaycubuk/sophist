@@ -1,10 +1,11 @@
 import { argv, exit } from 'node:process';
 import { join, basename } from "https://deno.land/std/path/mod.ts";
 import * as marked from 'npm:marked@15.0.6';
+import { serveDir } from "jsr:@std/http/file-server";
 
 const cwd = Deno.cwd();
 
-const isProd = false;
+const isProd = true;
 
 const args = argv.slice(isProd ? 4 : 2);
 
@@ -72,7 +73,8 @@ async function buildFile(filePath: string) {
       }
     },
     markdown: function(markdownContent: string) {
-      body.push(marked.parse(markdownContent));
+      const content = marked.parse(markdownContent) as string;
+      body.push(content);
     },
     frontmatter: function (obj: object) {
       frontmatter = obj;
@@ -139,8 +141,6 @@ async function buildFile(filePath: string) {
   console.log(filename + ' file created');
 }
 
-const pathString = join(cwd, args[0]);
-
 async function listFilesRecursive(dirPath: string): Promise<string[]> {
   const files: string[] = [];
 
@@ -165,21 +165,68 @@ async function listFilesRecursive(dirPath: string): Promise<string[]> {
   return files;
 }
 
-try {
-  const stats = await Deno.stat(pathString);
+async function buildSite(pathString: string) {
+  try {
+    const stats = await Deno.stat(pathString);
 
-  if (stats.isDirectory) {
-    console.log('Directory found.');
-    const files = await listFilesRecursive(pathString);
+    if (stats.isDirectory) {
+      console.log('Directory found.');
+      const files = await listFilesRecursive(pathString);
 
-    for (let i = 0; i < files.length; i++) {
-      await buildFile(files[i]);
+      for (let i = 0; i < files.length; i++) {
+        await buildFile(files[i]);
+      }
+    } else if (stats.isFile) {
+      console.log('File found.');
+
+      await buildFile(pathString);
     }
-  } else if (stats.isFile) {
-    console.log('File found.');
-
-    await buildFile(pathString);
+  } catch (error) {
+    console.error(error);
   }
-} catch (error) {
-  console.error(error);
 }
+
+async function watchFiles(pathString: string) {
+  const watcher = Deno.watchFs(pathString);
+
+  for await (const event of watcher) {
+    for (const path of event.paths) {
+      if (path.endsWith('.sphst') || path.endsWith('.js') || path.endsWith('.css')) {
+        console.log(event);
+        //await buildFile(path);
+        await buildSite(pathString);
+      }
+    }
+  }
+}
+
+async function startServer() {
+  console.log('Starting server...')
+  Deno.serve((req: Request) => {
+    return serveDir(req, {
+      fsRoot: "out",
+    });
+  });
+}
+
+async function main() {
+  if (args[0] == 'serve') {
+    if (args.length == 1) {
+      console.log('Usage: sophist server <path>');
+      return;
+    }
+
+    const pathString = join(cwd, args[1]);
+    await buildSite(pathString);
+
+    await Promise.all([
+      watchFiles(pathString),
+      startServer(),
+    ]);
+  } else {
+    const pathString = join(cwd, args[0]);
+    await buildSite(pathString);
+  }
+}
+
+await main();

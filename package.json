@@ -4,8 +4,8 @@
     "description": "What if JavaScript eats Markdown?",
     "main": "main.ts",
     "scripts": {
-        "compile": "deno compile --allow-read --allow-write --unstable main.ts --output sophist",
-        "start": "deno run -W -R main.ts"
+        "compile": "deno compile --allow-read --allow-write --allow-net --unstable main.ts --output sophist",
+        "start": "deno run -W -R --allow-net main.ts"
     },
     "bin": {
         "sophist": "./sophist"

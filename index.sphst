@@ -1,0 +1,5 @@
+const fm = _.frontmatter({
+    title: "Home",
+});
+
+_.h1(fm.title);
