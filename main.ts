@@ -1,5 +1,5 @@
 import { argv, exit } from 'node:process';
-import { join, basename } from "https://deno.land/std/path/mod.ts";
+import { join, basename } from "https://deno.land/std@0.224.0/path/mod.ts";
 import * as marked from 'npm:marked@15.0.6';
 import { serveDir } from "jsr:@std/http/file-server";
 
@@ -11,6 +11,7 @@ const args = argv.slice(isProd ? 4 : 2);
 
 if (args.length === 0) {
   console.log('Usage: sophist <file_name or folder_name>');
+  console.log('Sophist v1.0.0');
   exit(1);
 }
 

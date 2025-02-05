@@ -1,5 +1,5 @@
 {
-    "name": "sophist",
+    "name": "@berkaycubuk/sophist",
     "version": "1.0.0",
     "description": "What if JavaScript eats Markdown?",
     "main": "main.ts",
